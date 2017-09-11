@@ -1,7 +1,7 @@
-# 监控指定区间和指定时间范围内最低机票价格，并通过 SERVER 酱发送微信通知
+# 监控指定区间和指定时间范围内最低机票价格（美团网），并通过 SERVER 酱发送微信通知
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+import requests
+import json
 from bs4 import BeautifulSoup
 
 # 需要监控的航班信息
@@ -10,7 +10,7 @@ flight_data = [
     ['杭州', '宜昌', '2017-10-07', '2017-10-08', ''],
 ]
 
-# 请求头，好像没什么用
+# 请求头
 headers = {
     'Accept': '*/*',
     'Accept-Encoding': 'gzip, deflate, sdch, br',
@@ -22,36 +22,29 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3',
 }
 
-# 开启 PhantomJS
-driver = webdriver.PhantomJS()
+session=requests.session()
+session=session.get('http://i.meituan.com',headers=headers)
+t=session.cookies
+print(t)
 
+
+# 从日历上获取一个月内的最低价
+def lowest_price(dep_city_code, arr_city_code, start_date):
+    #api_url = 'https://api-m.kuxun.cn/getLowPriceCalendar/iphone/4/mt%7Cm%7Cm/' \
+    #          '?depart=' + dep_city_code + \
+    #          '&arrive=' + arr_city_code + \
+    #          '&startdate=' + str(start_date)
+    params={
+        'startdate': str(start_date),
+        'depart': dep_city_code,
+        'arrive': arr_city_code
+    }
+    api_url = 'https://api-m.kuxun.cn/getLowPriceCalendar/iphone/4/mt%7Cm%7Cm/'
+    api_data=requests.get(api_url,headers=headers,data=params).content
+    json_data=json.loads(api_data)
+    print(json_data)
 
 def flight_info(from_city, to_city, fly_date):
-    web_url = 'https://sjipiao.fliggy.com/flight_search_result.htm'
-    driver.get(web_url)
-    # 出发城市
-    dep_city = driver.find_element_by_name('depCityName')
-    dep_city.clear()
-    dep_city.send_keys(from_city)
-    city_click = driver.find_element_by_class_name('J_ResultsList')
-    city_click.click()
-    # 到达城市
-    arr_city = driver.find_element_by_name('arrCityName')
-    arr_city.clear()
-    arr_city.send_keys(to_city)
-    city_click = driver.find_element_by_class_name('J_ResultsList')
-    city_click.click()
-    # 出发日期
-    dep_date = driver.find_element_by_name('depDate')
-    dep_date.clear()
-    dep_date.send_keys(str(fly_date))
-    # 回车开始搜索
-    dep_date.send_keys(Keys.RETURN)
-    # 解析网页
-    web_html = driver.page_source
-    bs_obj = BeautifulSoup(web_html, 'html.parser')
-    print(bs_obj)
-    driver.close()
+    pass
 
-
-flight_info('杭州', '宜昌', '2017-10-11')
+#lowest_price('HGH','PEK','2017-10-01')
