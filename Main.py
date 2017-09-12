@@ -30,6 +30,7 @@ headers = {
 }
 session = requests.session()
 
+
 # curr_date 转换之后会变成 datetime.datetime 无法与 datetime.date 比较，所以需要增加这么一步
 def date_trans(trans_date):
     if isinstance(trans_date, datetime.datetime):
@@ -39,7 +40,6 @@ def date_trans(trans_date):
         return transed_date
     else:
         return trans_date
-
 
 
 # 从日历上获取最多30天内（含当天）的价格
@@ -67,7 +67,7 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
     new_date_price = []
     for data in date_price:
         curr_date = datetime.datetime.strptime(str(data['date'][:10]), '%Y-%m-%d')
-        curr_date=date_trans(curr_date)
+        curr_date = date_trans(curr_date)
         if not ('price' in data.keys()):
             continue
         if curr_date < start_date or curr_date > end_date:
@@ -165,12 +165,12 @@ def send2wx(title, content):
 
 for monitor in flight_data:
     dep_name, arr_name, start, end, price = monitor[1:]
-    dep_code=city_code(dep_name)
-    arr_code=city_code(arr_name)
-    all_date_prices=get_price(dep_code,arr_code,start,end)
-    lowestdates=lowest_date(all_date_prices)
+    dep_code = city_code(dep_name)
+    arr_code = city_code(arr_name)
+    all_date_prices = get_price(dep_code, arr_code, start, end)
+    lowestdates = lowest_date(all_date_prices)
     for lowestdate in lowestdates:
-        fli_info=flight_info(dep_code,arr_code,lowestdate)
+        fli_info = flight_info(dep_code, arr_code, lowestdate)
         print(fli_info)
 
 cur.close()
