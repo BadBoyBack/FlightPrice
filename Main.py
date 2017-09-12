@@ -3,8 +3,6 @@
 import requests
 import json
 import pymysql
-import time
-from bs4 import BeautifulSoup
 import datetime
 
 # 连接数据库
@@ -15,7 +13,7 @@ cur.execute('USE flight_price')
 # 需要监控的航班信息
 # id，起飞城市，到达城市，监控时间区间1，监控时间区间2，最低票价
 cur.execute('SELECT * FROM moniting_data')
-if cur.rowcount==0:
+if cur.rowcount == 0:
     exit()
 flight_data = cur.fetchall()
 
@@ -100,14 +98,16 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
         new_date_price_list.append(data)
     return new_date_price_list
 
+
 # 获取最低价格对应的日期
 def lowest_date(date_price):
-    if len(date_price)==1
+    if len(date_price) == 1:
         return date_price[0]['date']
-    date_index=0
+    date_index = 0
     for data in date_price:
-        if data['price']<data[date_index]
-            date_index=da
+        if data['price'] < data[date_index]:
+            date_index = date_price.index(data)
+    return date_price[date_index]
 
 
 # 获取城市对应的三字码
@@ -126,9 +126,9 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
     json_data = json.loads(api_data)
     info = json_data['data'][0]
     # 航空公司，航班编号，起飞时间，到达时间，机票价格
-    fli_info={'comp':'','flight':'','dep_time':'','arr_time':'','price':'',}
-    #存储航班信息
-    fli_info['comp']=info['coname']
+    fli_info = {'comp': '', 'flight': '', 'dep_time': '', 'arr_time': '', 'price': '', }
+    # 存储航班信息
+    fli_info['comp'] = info['coname']
     fli_info['flight'] = info['fn']
     fli_info['dep_time'] = info['s_time']
     fli_info['arr_time'] = info['a_time']
@@ -136,13 +136,15 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
     return fli_info
 
 
-def send2wz(title,content):
-    pass
+# 发送微信群通知
+def send2wz(title, content):
+    sckey = ''
+    sc_url = ''
+    requests.get(sc_url, sckey, title, content)
 
 
-
-
-
+print(get_price('HGH', 'HAK', '2017-9-28', '2017-10-31'))
+print(lowest_date(get_price('HGH', 'HAK', '2017-9-28', '2017-10-31')))
 
 cur.close()
 conn.close()
