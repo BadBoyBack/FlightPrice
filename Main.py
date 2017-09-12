@@ -100,6 +100,15 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
         new_date_price_list.append(data)
     return new_date_price_list
 
+# 获取最低价格对应的日期
+def lowest_date(date_price):
+    if len(date_price)==1
+        return date_price[0]['date']
+    date_index=0
+    for data in date_price:
+        if data['price']<data[date_index]
+            date_index=da
+
 
 # 获取城市对应的三字码
 def city_code(city_name):
