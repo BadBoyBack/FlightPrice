@@ -1,0 +1,17 @@
+CREATE TABLE moniting_data (
+  id INT AUTO_INCREMENT,
+  DepCityName VARCHAR(10),
+  ArrCityName VARCHAR(10),
+  Date_Begin DATE,
+  Date_End DATE,
+  Price int,
+  PRIMARY KEY (id)
+)
+
+
+CREATE TABLE city_code (
+  id INT AUTO_INCREMENT,
+  city_name VARCHAR(10),
+  city_code CHAR(3),
+  PRIMARY KEY (id)
+)
