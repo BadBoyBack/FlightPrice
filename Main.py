@@ -143,7 +143,6 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
               '&arrive=' + arr_city_code + \
               '&date=' + str(dep_date)[0:10]
     api_data = session.get(api_url, headers=headers).content
-    ppp = api_url[-11:]
     json_data = json.loads(api_data)
     info = json_data['data'][0]
     # 航空公司，航班编号，起飞时间，到达时间，机票价格
