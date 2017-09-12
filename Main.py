@@ -116,8 +116,8 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
 
 # 获取最低价格对应的日期（可能不止一个）
 def lowest_date(date_price):
-    if len(date_price) == 1:
-        return date_price[0]['date']
+    # if len(date_price) == 1:
+    #     return date_price[0]['date']
     date_index = 0
     for data in date_price:
         if int(data['price']) < int(date_price[date_index]['price']):
@@ -143,6 +143,7 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
               '&arrive=' + arr_city_code + \
               '&date=' + str(dep_date)[0:10]
     api_data = session.get(api_url, headers=headers).content
+    ppp = api_url[-11:]
     json_data = json.loads(api_data)
     info = json_data['data'][0]
     # 航空公司，航班编号，起飞时间，到达时间，机票价格
