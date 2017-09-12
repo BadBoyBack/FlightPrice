@@ -6,7 +6,7 @@ import pymysql
 import datetime
 
 # 连接数据库
-conn = pymysql.connect(host='192.168.57.253', user='root', passwd='123456', charset='utf8')
+conn = pymysql.connect(host='localhost', user='root', passwd='123456', charset='utf8')
 cur = conn.cursor()
 cur.execute('USE flight_price')
 
@@ -29,6 +29,17 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3',
 }
 session = requests.session()
+
+# curr_date 转换之后会变成 datetime.datetime 无法与 datetime.date 比较，所以需要增加这么一步
+def date_trans(trans_date):
+    if isinstance(trans_date, datetime.datetime):
+        trans_date_str = str(trans_date)
+        str_year, str_mon, str_day = int(trans_date_str[0:4]), int(trans_date_str[5:7]), int(trans_date_str[8:10])
+        transed_date = datetime.date(str_year, str_mon, str_day)
+        return transed_date
+    else:
+        return trans_date
+
 
 
 # 从日历上获取最多30天内（含当天）的价格
@@ -55,11 +66,13 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
     # 提取数据到新的 日期-价格 列表
     new_date_price = []
     for data in date_price:
-        curr_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d')
+        curr_date = datetime.datetime.strptime(str(data['date'][:10]), '%Y-%m-%d')
+        curr_date=date_trans(curr_date)
         if not ('price' in data.keys()):
             continue
         if curr_date < start_date or curr_date > end_date:
             continue
+            datetime.date.strftime()
         new_date_price.append(data)
     return new_date_price
 
@@ -88,31 +101,38 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
                                              curr_date + datetime.timedelta(29)):
                 date_price_list.append(date_price)
             curr_date = curr_date + datetime.timedelta(30)
+            curr_date = date_trans(curr_date)
     # 筛选掉不属于日期期间的数据
     # 上面为了防止出现curr_date大于end_date而部取数的情况，多加了一些天数
     new_date_price_list = []
     for data in date_price_list:
         curr_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d')
+        curr_date = date_trans(curr_date)
         if curr_date < start_date or curr_date > end_date:
             continue
         new_date_price_list.append(data)
     return new_date_price_list
 
 
-# 获取最低价格对应的日期
+# 获取最低价格对应的日期（可能不止一个）
 def lowest_date(date_price):
     if len(date_price) == 1:
         return date_price[0]['date']
     date_index = 0
     for data in date_price:
-        if data['price'] < data[date_index]:
+        if int(data['price']) < int(date_price[date_index]['price']):
             date_index = date_price.index(data)
-    return date_price[date_index]
+    # 可能会存在多个最低价的情况，所以需要分别存储
+    lowest_date_list = []
+    for data in date_price:
+        if data['price'] == date_price[date_index]['price']:
+            lowest_date_list.append(data['date'])
+    return lowest_date_list
 
 
 # 获取城市对应的三字码
 def city_code(city_name):
-    cur.execute('SELECT city_code FROM city_code WHERE city_name=%s', (city_name))
+    cur.execute('SELECT city_code FROM city_code WHERE city_name= %s', (city_name))
     return cur.fetchone()[0]
 
 
@@ -137,14 +157,21 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
 
 
 # 发送微信群通知
-def send2wz(title, content):
-    sckey = ''
-    sc_url = ''
-    requests.get(sc_url, sckey, title, content)
+def send2wx(title, content):
+    sendkey = ''
+    sc_url = 'https://pushbear.ftqq.com/sub?sendkey=' + sendkey + '&text=' + title + '&desp=' + content
+    requests.post(sc_url)
 
 
-print(get_price('HGH', 'HAK', '2017-9-28', '2017-10-31'))
-print(lowest_date(get_price('HGH', 'HAK', '2017-9-28', '2017-10-31')))
+for monitor in flight_data:
+    dep_name, arr_name, start, end, price = monitor[1:]
+    dep_code=city_code(dep_name)
+    arr_code=city_code(arr_name)
+    all_date_prices=get_price(dep_code,arr_code,start,end)
+    lowestdates=lowest_date(all_date_prices)
+    for lowestdate in lowestdates:
+        fli_info=flight_info(dep_code,arr_code,lowestdate)
+        print(fli_info)
 
 cur.close()
 conn.close()
