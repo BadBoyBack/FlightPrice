@@ -4,9 +4,10 @@ import requests
 import json
 import pymysql
 import datetime
+import time
 
 # 连接数据库
-conn = pymysql.connect(host='localhost', user='root', passwd='123456', charset='utf8')
+conn = pymysql.connect(host='192.168.57.253', user='root', passwd='123456', charset='utf8')
 cur = conn.cursor()
 cur.execute('USE flight_price')
 
@@ -56,6 +57,8 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
     # 如果时间间隔大于 29 天，那也只能使用 29 天
     if end_date > start_date + datetime.timedelta(29):
         end_date = start_date + datetime.timedelta(29)
+    start_date = date_trans(start_date)
+    end_date = date_trans(end_date)
     api_url = 'https://kuxun-i.meituan.com/getLowPriceCalendar/iphone/4/mt|m|m/' \
               '?startdate=' + str(start_date)[0:10] + \
               '&depart=' + dep_city_code + \
@@ -89,6 +92,8 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
     # 也要判断是不是日期格式，不是的话也需要转换
     if isinstance(end_date, str):
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    start_date = date_trans(start_date)
+    end_date = date_trans(end_date)
     # 获取 日期-价格 数据存储到列表
     date_price_list = []
     if start_date + datetime.timedelta(29) > end_date:
@@ -145,11 +150,12 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
     api_data = session.get(api_url, headers=headers).content
     json_data = json.loads(api_data)
     info = json_data['data'][0]
-    # 航空公司，航班编号，起飞时间，到达时间，机票价格
-    fli_info = {'comp': '', 'flight': '', 'dep_time': '', 'arr_time': '', 'price': '', }
+    # 航空公司，航班编号，起飞日期，起飞时间，到达时间，机票价格
+    fli_info = {'comp': '', 'flight': '', 'date': '', 'dep_time': '', 'arr_time': '', 'price': '', }
     # 存储航班信息
     fli_info['comp'] = info['coname']
     fli_info['flight'] = info['fn']
+    fli_info['date'] = str(dep_date)[0:10]
     fli_info['dep_time'] = info['s_time']
     fli_info['arr_time'] = info['a_time']
     fli_info['price'] = info['price']
@@ -164,14 +170,36 @@ def send2wx(title, content):
 
 
 for monitor in flight_data:
-    dep_name, arr_name, start, end, price = monitor[1:]
+    curr_id, dep_name, arr_name, start, end, price = monitor
     dep_code = city_code(dep_name)
     arr_code = city_code(arr_name)
     all_date_prices = get_price(dep_code, arr_code, start, end)
     lowestdates = lowest_date(all_date_prices)
     for lowestdate in lowestdates:
-        fli_info = flight_info(dep_code, arr_code, lowestdate)
-        print(fli_info)
+        try:
+            fli_info = flight_info(dep_code, arr_code, lowestdate)
+        except:
+            continue
+        # 对比存储在数据库中的价格，如果低于则继续运行程序并存储这个价格
+        if int(fli_info['price']) > 0 and int(fli_info['price']) < int(price):
+            cur.execute('UPDATE moniting_data SET Price=%s WHERE id=%s', (int(fli_info['price']), curr_id))
+            conn.commit()
+        else:
+            continue
+        send_title = '发现' + dep_name + '到' + arr_name + '的历史最低价'
+        send_content = '航空公司：' + fli_info['comp'] + \
+                       '\n\n航班编号：' + fli_info['flight'] + \
+                       '\n\n日期：' + fli_info['date'] + \
+                       '\n\n时间：' + fli_info['dep_time'] + \
+                       ' -' + fli_info['arr_time'] + \
+                       '\n\n价格：' + str(fli_info['price']) + '元'
+        send2wx(send_title, send_content)
+        # 为了防止获取不到数据，需要先暂停一段时间
+        time.sleep(30)
+
+# print(get_price('HGH','HAK','2017-09-28'))
+
+
 
 cur.close()
 conn.close()
