@@ -63,7 +63,7 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
               '?startdate=' + str(start_date)[0:10] + \
               '&depart=' + dep_city_code + \
               '&arrive=' + arr_city_code
-    api_data = session.get(api_url, headers=headers).content
+    api_data = session.get(api_url, headers=headers).content.decode('utf8')
     json_data = json.loads(api_data)
     date_price = json_data['data']['dataList']
     # 提取数据到新的 日期-价格 列表
@@ -180,6 +180,7 @@ for monitor in flight_data:
         try:
             fli_info = flight_info(dep_code, arr_code, lowestdate)
         except:
+            print('EXIT')
             continue
         # 对比存储在数据库中的价格，如果低于则继续运行程序并存储这个价格
         if int(fli_info['price']) > 0 and int(fli_info['price']) < int(price):
