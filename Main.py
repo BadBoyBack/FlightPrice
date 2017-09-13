@@ -169,6 +169,7 @@ def send2wx(title, content):
     requests.post(sc_url)
 
 
+# 主程序
 for monitor in flight_data:
     curr_id, dep_name, arr_name, start, end, price = monitor
     dep_code = city_code(dep_name)
@@ -197,9 +198,6 @@ for monitor in flight_data:
         # 为了防止获取不到数据，需要先暂停一段时间
         time.sleep(30)
 
-# print(get_price('HGH','HAK','2017-09-28'))
-
-
-
+# 关闭数据库连接
 cur.close()
 conn.close()
