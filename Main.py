@@ -236,8 +236,7 @@ def main():
 
 
 # 运行程序
-if __name__ == '__main__':
-    main()
+main()
 
 # 关闭数据库连接
 cur.close()
