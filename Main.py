@@ -7,7 +7,7 @@ import datetime
 import time
 
 # 连接数据库
-conn = pymysql.connect(host='192.168.57.253', user='root', passwd='123456', charset='utf8')
+conn = pymysql.connect(host='localhost', user='root', passwd='123456', charset='utf8')
 cur = conn.cursor()
 cur.execute('USE flight_price')
 
@@ -196,7 +196,7 @@ for monitor in flight_data:
                        '\n\n价格：' + str(fli_info['price']) + '元'
         send2wx(send_title, send_content)
         # 为了防止获取不到数据，需要先暂停一段时间
-        time.sleep(30)
+        time.sleep(60)
 
 # 关闭数据库连接
 cur.close()
