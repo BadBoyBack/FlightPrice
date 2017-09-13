@@ -29,7 +29,9 @@ headers = {
     'Referer': 'http://i.meituan.com',
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3',
 }
-session = requests.session()
+proxies = {
+    'http': 'http://116.236.151.166:8080',
+}
 
 
 # curr_date 转换之后会变成 datetime.datetime 无法与 datetime.date 比较，所以需要增加这么一步
@@ -63,7 +65,7 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
               '?startdate=' + str(start_date)[0:10] + \
               '&depart=' + dep_city_code + \
               '&arrive=' + arr_city_code
-    api_data = session.get(api_url, headers=headers).content.decode('utf8')
+    api_data = requests.get(api_url, headers=headers).content.decode('utf8')
     json_data = json.loads(api_data)
     date_price = json_data['data']['dataList']
     # 提取数据到新的 日期-价格 列表
@@ -147,7 +149,7 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
               '?depart=' + dep_city_code + \
               '&arrive=' + arr_city_code + \
               '&date=' + str(dep_date)[0:10]
-    api_data = session.get(api_url, headers=headers).content
+    api_data = requests.get(api_url, headers=headers, proxies=proxies).content.decode('utf8')
     json_data = json.loads(api_data)
     info = json_data['data'][0]
     # 航空公司，航班编号，起飞日期，起飞时间，到达时间，机票价格
@@ -166,7 +168,7 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
 def send2wx(title, content):
     sendkey = ''
     sc_url = 'https://pushbear.ftqq.com/sub?sendkey=' + sendkey + '&text=' + title + '&desp=' + content
-    requests.post(sc_url)
+    requests.get(sc_url)
 
 
 # 主程序
@@ -176,6 +178,7 @@ for monitor in flight_data:
     arr_code = city_code(arr_name)
     all_date_prices = get_price(dep_code, arr_code, start, end)
     lowestdates = lowest_date(all_date_prices)
+    print(lowestdates)
     for lowestdate in lowestdates:
         try:
             fli_info = flight_info(dep_code, arr_code, lowestdate)
