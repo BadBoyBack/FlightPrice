@@ -5,6 +5,7 @@ import json
 import pymysql
 import datetime
 import time
+from bs4 import BeautifulSoup
 
 # 连接数据库
 conn = pymysql.connect(host='localhost', user='root', passwd='123456', charset='utf8')
@@ -29,9 +30,39 @@ headers = {
     'Referer': 'http://i.meituan.com',
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3',
 }
-proxies = {
-    'http': 'http://116.236.151.166:8080',
-}
+
+
+# flight_info() 只能从国内获取所以需要使用代理
+# 代理IP从 xicidaili.com 获取，取得第一个能用的
+def get_proxy():
+    ip_url = 'http://www.xicidaili.com/nt/'
+    head = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'zh-CN,zh;q=0.8',
+        'Connection': 'keep-alive',
+        'Host': 'www.xicidaili.com',
+        'Referer': 'http://www.xicidaili.com/',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    }
+    response = requests.get(ip_url, headers=head)
+    bs_obj = BeautifulSoup(response.content.decode('utf8'), 'html.parser')
+    ip_list = bs_obj.find('table', id='ip_list').find_all('tr')[1:]
+    # 获取到的代理需要组成一个 dict 才能被 requests 使用
+    ip_dict = {}
+    for ip_data in ip_list:
+        ip_info = ip_data.find_all('td')
+        ip = str(ip_info[1].get_text())
+        port = str(ip_info[2].get_text())
+        http_type = str(ip_info[5].get_text()).lower()
+        try:
+            resp = requests.get(http_type + '://' + ip, timeout=3)
+            if resp.status_code == 200:
+                ip_dict[http_type] = http_type + '://' + ip + ':' + port
+                return ip_dict
+        except:
+            continue
 
 
 # curr_date 转换之后会变成 datetime.datetime 无法与 datetime.date 比较，所以需要增加这么一步
@@ -77,7 +108,7 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
             continue
         if curr_date < start_date or curr_date > end_date:
             continue
-            datetime.date.strftime()
+            #datetime.date.strftime()
         new_date_price.append(data)
     return new_date_price
 
@@ -149,7 +180,7 @@ def flight_info(dep_city_code, arr_city_code, dep_date):
               '?depart=' + dep_city_code + \
               '&arrive=' + arr_city_code + \
               '&date=' + str(dep_date)[0:10]
-    api_data = requests.get(api_url, headers=headers, proxies=proxies).content.decode('utf8')
+    api_data = requests.get(api_url, headers=headers, proxies=get_proxy()).content.decode('utf8')
     json_data = json.loads(api_data)
     info = json_data['data'][0]
     # 航空公司，航班编号，起飞日期，起飞时间，到达时间，机票价格
@@ -172,35 +203,42 @@ def send2wx(title, content):
 
 
 # 主程序
-for monitor in flight_data:
-    curr_id, dep_name, arr_name, start, end, price = monitor
-    dep_code = city_code(dep_name)
-    arr_code = city_code(arr_name)
-    all_date_prices = get_price(dep_code, arr_code, start, end)
-    lowestdates = lowest_date(all_date_prices)
-    print(lowestdates)
-    for lowestdate in lowestdates:
-        try:
-            fli_info = flight_info(dep_code, arr_code, lowestdate)
-        except:
-            print('EXIT')
-            continue
-        # 对比存储在数据库中的价格，如果低于则继续运行程序并存储这个价格
-        if int(fli_info['price']) > 0 and int(fli_info['price']) < int(price):
-            cur.execute('UPDATE moniting_data SET Price=%s WHERE id=%s', (int(fli_info['price']), curr_id))
-            conn.commit()
-        else:
-            continue
-        send_title = '发现' + dep_name + '到' + arr_name + '的历史最低价'
-        send_content = '航空公司：' + fli_info['comp'] + \
-                       '\n\n航班编号：' + fli_info['flight'] + \
-                       '\n\n日期：' + fli_info['date'] + \
-                       '\n\n时间：' + fli_info['dep_time'] + \
-                       ' -' + fli_info['arr_time'] + \
-                       '\n\n价格：' + str(fli_info['price']) + '元'
-        send2wx(send_title, send_content)
-        # 为了防止获取不到数据，需要先暂停一段时间
-        time.sleep(60)
+def main():
+    for monitor in flight_data:
+        curr_id, dep_name, arr_name, start, end, price = monitor
+        dep_code = city_code(dep_name)
+        arr_code = city_code(arr_name)
+        all_date_prices = get_price(dep_code, arr_code, start, end)
+        lowestdates = lowest_date(all_date_prices)
+        print(lowestdates)
+        for lowestdate in lowestdates:
+            try:
+                fli_info = flight_info(dep_code, arr_code, lowestdate)
+            except:
+                print('EXIT')
+                continue
+            # 对比存储在数据库中的价格，如果低于则继续运行程序并存储这个价格
+            if int(fli_info['price']) > 0 and int(fli_info['price']) < int(price):
+                cur.execute('UPDATE moniting_data SET Price=%s WHERE id=%s', (int(fli_info['price']), curr_id))
+                conn.commit()
+            else:
+                continue
+            send_title = '发现' + dep_name + '到' + arr_name + '的历史最低价'
+            send_content = '航空公司：' + fli_info['comp'] + \
+                           '\n\n航班编号：' + fli_info['flight'] + \
+                           '\n\n日期：' + fli_info['date'] + \
+                           '\n\n时间：' + fli_info['dep_time'] + \
+                           ' -' + fli_info['arr_time'] + \
+                           '\n\n价格：' + str(fli_info['price']) + '元'
+            send2wx(send_title, send_content)
+            print('DONE')
+            # 为了防止获取不到数据，需要先暂停一段时间
+            time.sleep(60)
+
+
+# 运行程序
+if __name__ == '__main__':
+    main()
 
 # 关闭数据库连接
 cur.close()
