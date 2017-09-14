@@ -108,7 +108,6 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
         curr_date = date_trans(curr_date)
         if curr_date < start_date or curr_date > end_date:
             continue
-            #datetime.date.strftime()
         new_date_price.append(data)
     return new_date_price
 
@@ -153,8 +152,6 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
 
 # 获取最低价格对应的日期（可能不止一个）
 def lowest_date(date_price):
-    # if len(date_price) == 1:
-    #     return date_price[0]['date']
     date_index = 0
     for data in date_price:
         if int(data['price']) < int(date_price[date_index]['price']):
@@ -222,13 +219,13 @@ def main():
                 conn.commit()
             else:
                 continue
-            send_title = '发现' + dep_name + '到' + arr_name + '的低价机票'
-            send_content = '航空公司：' + fli_info['comp'] + \
-                           '\n\n航班编号：' + fli_info['flight'] + \
-                           '\n\n日期：' + fli_info['date'] + \
-                           '\n\n时间：' + fli_info['dep_time'] + \
+            send_title = '发现 ' + dep_name + '-' + arr_name + ' 的低价机票'
+            send_content = '**航空公司**： ' + fli_info['comp'] + \
+                           '\n\n**航班编号**： ' + fli_info['flight'] + \
+                           '\n\n**出发日期**： ' + fli_info['date'] + \
+                           '\n\n**起降时间**： ' + fli_info['dep_time'] + \
                            ' - ' + fli_info['arr_time'] + \
-                           '\n\n价格：' + str(fli_info['price']) + '元'
+                           '\n\n**机票价格**： ' + str(fli_info['price']) + ' 元'
             send2wx(send_title, send_content)
             print('DONE')
             # 为了防止获取不到数据，需要先暂停一段时间
