@@ -15,6 +15,7 @@ cur.execute('USE flight_price')
 # 需要监控的航班信息
 # id，起飞城市，到达城市，监控时间区间1，监控时间区间2，最低票价
 cur.execute('SELECT * FROM moniting_data')
+# 没有需要监控的就直接退出
 if cur.rowcount == 0:
     exit()
 flight_data = cur.fetchall()
@@ -102,7 +103,7 @@ def calender_price(dep_city_code, arr_city_code, start_date, end_date=None):
     # 提取数据到新的 日期-价格 列表
     new_date_price = []
     for data in date_price:
-        if not ('price' in data.keys()) or data['price']==None:
+        if not ('price' in data.keys()) or data['price'] == None:
             continue
         curr_date = datetime.datetime.strptime(str(data['date'][:10]), '%Y-%m-%d')
         curr_date = date_trans(curr_date)
@@ -134,7 +135,8 @@ def get_price(dep_city_code, arr_city_code, start_date, end_date=None):
     else:
         curr_date = start_date
         while curr_date <= end_date + datetime.timedelta(29):
-            for date_price in calender_price(dep_city_code, arr_city_code, curr_date,curr_date + datetime.timedelta(29)):
+            for date_price in calender_price(dep_city_code, arr_city_code, curr_date,
+                                             curr_date + datetime.timedelta(29)):
                 date_price_list.append(date_price)
             curr_date = curr_date + datetime.timedelta(30)
             curr_date = date_trans(curr_date)
@@ -207,8 +209,9 @@ def main():
         all_date_prices = get_price(dep_code, arr_code, start, end)
         lowestdates = lowest_date(all_date_prices)
         send_title = '发现' + dep_name + '到' + arr_name + '的低价机票'
-        send_content=""
+        send_content = ""
         for lowestdate in lowestdates:
+            # 为了防止获取不到数据，需要先暂停一段时间
             time.sleep(60)
             try:
                 fli_info = flight_info(dep_code, arr_code, lowestdate)
@@ -221,18 +224,16 @@ def main():
                 conn.commit()
             else:
                 continue
-            send_content = send_content+\
-                            '**航空公司**： ' + fli_info['comp'] + \
+            send_content = send_content + \
+                           '**航空公司**： ' + fli_info['comp'] + \
                            '\n\n**航班编号**： ' + fli_info['flight'] + \
                            '\n\n**出发日期**： ' + fli_info['date'] + \
                            '\n\n**起降时间**： ' + fli_info['dep_time'] + \
                            ' - ' + fli_info['arr_time'] + \
-                           '\n\n**机票价格**： ' + str(fli_info['price']) + ' 元'+\
+                           '\n\n**机票价格**： ' + str(fli_info['price']) + ' 元' + \
                            '\n\n***\n\n'
-
             print('DONE')
-            # 为了防止获取不到数据，需要先暂停一段时间
-        if len(send_content)>10:
+        if len(send_content) > 10:
             send2wx(send_title, send_content)
 
 
