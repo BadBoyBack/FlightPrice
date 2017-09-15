@@ -206,8 +206,10 @@ def main():
         arr_code = city_code(arr_name)
         all_date_prices = get_price(dep_code, arr_code, start, end)
         lowestdates = lowest_date(all_date_prices)
-        print(lowestdates)
+        send_title = '发现' + dep_name + '到' + arr_name + '的低价机票'
+        send_content=""
         for lowestdate in lowestdates:
+            time.sleep(60)
             try:
                 fli_info = flight_info(dep_code, arr_code, lowestdate)
             except:
@@ -219,17 +221,18 @@ def main():
                 conn.commit()
             else:
                 continue
-            send_title = '发现 ' + dep_name + '-' + arr_name + ' 的低价机票'
-            send_content = '**航空公司**： ' + fli_info['comp'] + \
+            send_content = send_content+\
+                            '**航空公司**： ' + fli_info['comp'] + \
                            '\n\n**航班编号**： ' + fli_info['flight'] + \
                            '\n\n**出发日期**： ' + fli_info['date'] + \
                            '\n\n**起降时间**： ' + fli_info['dep_time'] + \
                            ' - ' + fli_info['arr_time'] + \
-                           '\n\n**机票价格**： ' + str(fli_info['price']) + ' 元'
-            send2wx(send_title, send_content)
+                           '\n\n**机票价格**： ' + str(fli_info['price']) + ' 元'+\
+                           '\n\n***\n\n'
+
             print('DONE')
             # 为了防止获取不到数据，需要先暂停一段时间
-            time.sleep(60)
+        send2wx(send_title, send_content)
 
 
 # 运行程序
