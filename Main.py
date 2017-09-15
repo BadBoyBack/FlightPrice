@@ -232,7 +232,8 @@ def main():
 
             print('DONE')
             # 为了防止获取不到数据，需要先暂停一段时间
-        send2wx(send_title, send_content)
+        if len(send_content)>10:
+            send2wx(send_title, send_content)
 
 
 # 运行程序
